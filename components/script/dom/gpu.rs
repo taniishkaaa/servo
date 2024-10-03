@@ -4,7 +4,6 @@
 
 use std::rc::Rc;
 
-#[allow(clippy::upper_case_acronyms)]
 use dom_struct::dom_struct;
 use ipc_channel::ipc::{self, IpcSender};
 use ipc_channel::router::ROUTER;
