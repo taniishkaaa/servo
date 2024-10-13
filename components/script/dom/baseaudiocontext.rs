@@ -66,6 +66,7 @@ use crate::dom::promise::Promise;
 use crate::dom::stereopannernode::StereoPannerNode;
 use crate::dom::window::Window;
 use crate::realms::InRealm;
+use crate::script_runtime::CanGc;
 use crate::task_source::TaskSource;
 
 #[allow(dead_code)]
@@ -375,11 +376,12 @@ impl BaseAudioContextMethods for BaseAudioContext {
     }
 
     /// <https://webaudio.github.io/web-audio-api/#dom-baseaudiocontext-createstereopanner>
-    fn CreateStereoPanner(&self) -> Fallible<DomRoot<StereoPannerNode>> {
+    fn CreateStereoPanner(&self, can_gc: CanGc) -> Fallible<DomRoot<StereoPannerNode>> {
         StereoPannerNode::new(
             self.global().as_window(),
             self,
             &StereoPannerOptions::empty(),
+            can_gc,
         )
     }
 
