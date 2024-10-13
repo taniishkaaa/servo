@@ -216,7 +216,7 @@ impl Gamepad {
         self.gamepad_id
     }
 
-    pub fn update_connected(&self, connected: bool, has_gesture: bool) {
+    pub fn update_connected(&self, connected: bool, has_gesture: bool, can_gc: CanGc) {
         if self.connected.get() == connected {
             return;
         }
@@ -229,7 +229,7 @@ impl Gamepad {
         };
 
         if has_gesture {
-            self.notify_event(event_type);
+            self.notify_event(event_type, can_gc);
         }
     }
 
