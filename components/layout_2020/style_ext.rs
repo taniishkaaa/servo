@@ -33,6 +33,8 @@ use crate::geom::{
 };
 use crate::{ContainingBlock, IndefiniteContainingBlock};
 
+type ContentBoxSizesAndPBM = (LogicalVec2<Size<Au>>, LogicalVec2<Size<Au>>, LogicalVec2<Size<Au>>);
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Display {
     None,
@@ -245,9 +247,7 @@ pub(crate) trait ComputedValuesExt {
         &self,
         containing_block: &IndefiniteContainingBlock,
     ) -> (
-        LogicalVec2<Size<Au>>,
-        LogicalVec2<Size<Au>>,
-        LogicalVec2<Size<Au>>,
+        ContentBoxSizesAndPBM,
         PaddingBorderMargin,
     );
     fn content_box_sizes_and_padding_border_margin_deprecated(
@@ -495,9 +495,7 @@ impl ComputedValuesExt for ComputedValues {
         &self,
         containing_block: &IndefiniteContainingBlock,
     ) -> (
-        LogicalVec2<Size<Au>>,
-        LogicalVec2<Size<Au>>,
-        LogicalVec2<Size<Au>>,
+        ContentBoxSizesAndPBM,
         PaddingBorderMargin,
     ) {
         // <https://drafts.csswg.org/css-sizing-3/#cyclic-percentage-contribution>
@@ -531,7 +529,7 @@ impl ComputedValuesExt for ComputedValues {
         let content_max_size = self
             .content_max_box_size_for_max_size(max_size, &pbm)
             .map(|v| v.map(Au::from));
-        (content_box_size, content_min_size, content_max_size, pbm)
+        ((content_box_size, content_min_size, content_max_size), pbm)
     }
 
     fn content_box_sizes_and_padding_border_margin_deprecated(
@@ -543,7 +541,7 @@ impl ComputedValuesExt for ComputedValues {
         LogicalVec2<Option<Au>>,
         PaddingBorderMargin,
     ) {
-        let (content_box_size, content_min_size, content_max_size, pbm) =
+        let ((content_box_size, content_min_size, content_max_size), pbm) =
             self.content_box_sizes_and_padding_border_margin(containing_block);
         (
             content_box_size.map(Size::to_auto_or),
