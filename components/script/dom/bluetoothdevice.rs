@@ -49,6 +49,7 @@ struct AttributeInstanceMap {
     descriptor_map: DomRefCell<HashMap<String, Dom<BluetoothRemoteGATTDescriptor>>>,
 }
 
+// https://webbluetoothcg.github.io/web-bluetooth/#bluetoothdevice
 #[dom_struct]
 pub struct BluetoothDevice {
     eventtarget: EventTarget,
