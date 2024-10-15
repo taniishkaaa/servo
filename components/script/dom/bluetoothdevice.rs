@@ -42,14 +42,6 @@ struct AttributeInstanceMap {
 }
 
 // https://webbluetoothcg.github.io/web-bluetooth/#bluetoothdevice
-#[derive(JSTraceable, MallocSizeOf)]
-struct AttributeInstanceMap {
-    service_map: DomRefCell<HashMap<String, Dom<BluetoothRemoteGATTService>>>,
-    characteristic_map: DomRefCell<HashMap<String, Dom<BluetoothRemoteGATTCharacteristic>>>,
-    descriptor_map: DomRefCell<HashMap<String, Dom<BluetoothRemoteGATTDescriptor>>>,
-}
-
-// https://webbluetoothcg.github.io/web-bluetooth/#bluetoothdevice
 #[dom_struct]
 pub struct BluetoothDevice {
     eventtarget: EventTarget,
