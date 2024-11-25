@@ -923,7 +923,7 @@ impl<'a> AbsoluteAxisSolver<'a> {
     fn origin_for_alignment_or_justification(
         &self,
         margin_box_axis: RectAxis,
-        wrapper_writing_mode: WritingMode,
+        container_writing_mode: WritingMode,
         abspos_writing_mode: WritingMode,
     ) -> Option<Au> {
         let alignment_container = match (
@@ -943,6 +943,12 @@ impl<'a> AbsoluteAxisSolver<'a> {
             _ => return None,
         };
 
+        assert_eq!(
+            container_writing_mode.is_horizontal(),
+            abspos_writing_mode.is_horizontal(),
+            "Mixed horizontal and vertical writing modes are not supported yet"
+        );
+
         let mut value_after_safety = self.alignment.value();
         if self.alignment.flags() == AlignFlags::SAFE &&
             margin_box_axis.length > alignment_container.length
@@ -950,88 +956,52 @@ impl<'a> AbsoluteAxisSolver<'a> {
             value_after_safety = AlignFlags::START;
         }
 
-        match value_after_safety {
-            AlignFlags::CENTER => Some(
-                alignment_container.origin +
-                    ((alignment_container.length - margin_box_axis.length) / 2),
-            ),
-            AlignFlags::FLEX_END | AlignFlags::END => Some(
-                alignment_container.origin + alignment_container.length - margin_box_axis.length,
-            ),
-            AlignFlags::SELF_START => match self.axis {
-                AxisDirection::Block => Some(alignment_container.origin),
-                AxisDirection::Inline => {
-                    if wrapper_writing_mode.is_bidi_ltr() == abspos_writing_mode.is_bidi_ltr() {
-                        Some(alignment_container.origin)
-                    } else if wrapper_writing_mode.is_bidi_ltr() &&
-                        !abspos_writing_mode.is_bidi_ltr()
-                    {
-                        Some(
-                            alignment_container.origin + alignment_container.length -
-                                margin_box_axis.length,
-                        )
-                    } else {
-                        Some(
-                            alignment_container.origin + alignment_container.length -
-                                margin_box_axis.length,
-                        )
-                    }
-                },
-            },
-            AlignFlags::SELF_END => match self.axis {
-                AxisDirection::Block => Some(
-                    alignment_container.origin + alignment_container.length -
-                        margin_box_axis.length,
-                ),
-                AxisDirection::Inline => {
-                    if wrapper_writing_mode.is_bidi_ltr() == abspos_writing_mode.is_bidi_ltr() {
-                        Some(
-                            alignment_container.origin + alignment_container.length -
-                                margin_box_axis.length,
-                        )
-                    } else if wrapper_writing_mode.is_bidi_ltr() &&
-                        !abspos_writing_mode.is_bidi_ltr()
-                    {
-                        Some(alignment_container.origin)
-                    } else {
-                        Some(alignment_container.origin)
-                    }
-                },
-            },
-            AlignFlags::LEFT => {
-                if wrapper_writing_mode.is_bidi_ltr() {
-                    Some(alignment_container.origin)
-                } else {
-                    Some(
-                        alignment_container.origin + alignment_container.length -
-                            margin_box_axis.length,
-                    )
-                }
-            },
-            AlignFlags::RIGHT => {
-                if wrapper_writing_mode.is_bidi_ltr() {
-                    Some(
-                        alignment_container.origin + alignment_container.length -
-                            margin_box_axis.length,
-                    )
-                } else {
-                    Some(alignment_container.origin)
-                }
-            },
-            _ => Some(alignment_container.origin),
-        }
+        let self_value_matches_container = self.axis == AxisDirection::Block ||
+            container_writing_mode.is_bidi_ltr() == abspos_writing_mode.is_bidi_ltr();
+
+        let resolved_value_after_safety = match value_after_safety {
+            // https://drafts.csswg.org/css-align/#valdef-self-position-center
+            AlignFlags::CENTER => AlignFlags::CENTER,
+            // https://drafts.csswg.org/css-align/#valdef-self-position-self-start
+            AlignFlags::SELF_START if self_value_matches_container => AlignFlags::START,
+            AlignFlags::SELF_START => AlignFlags::END,
+            // https://drafts.csswg.org/css-align/#valdef-self-position-self-end
+            AlignFlags::SELF_END if self_value_matches_container => AlignFlags::END,
+            AlignFlags::SELF_END => AlignFlags::START,
+            // https://drafts.csswg.org/css-align/#valdef-justify-content-left
+            AlignFlags::LEFT if container_writing_mode.is_bidi_ltr() => AlignFlags::START,
+            AlignFlags::LEFT => AlignFlags::END,
+            // https://drafts.csswg.org/css-align/#valdef-justify-content-right
+            AlignFlags::RIGHT if container_writing_mode.is_bidi_ltr() => AlignFlags::END,
+            AlignFlags::RIGHT => AlignFlags::START,
+            // https://drafts.csswg.org/css-align/#valdef-self-position-end
+            // https://drafts.csswg.org/css-align/#valdef-self-position-flex-end
+            AlignFlags::END | AlignFlags::FLEX_END => AlignFlags::END,
+            // https://drafts.csswg.org/css-align/#valdef-self-position-start
+            // https://drafts.csswg.org/css-align/#valdef-self-position-flex-start
+            _ => AlignFlags::START,
+        };
+
+        let origin = alignment_container.origin +
+            match resolved_value_after_safety {
+                AlignFlags::END => alignment_container.length - margin_box_axis.length,
+                AlignFlags::CENTER => (alignment_container.length - margin_box_axis.length) / 2,
+                _ => return None,
+            };
+
+        Some(origin)
     }
 
     fn solve_alignment(
         &self,
         margin_box_rect: LogicalRect<Au>,
         content_box_rect: &mut LogicalRect<Au>,
-        wrapper_writing_mode: WritingMode,
+        container_writing_mode: WritingMode,
         abspos_writing_mode: WritingMode,
     ) {
         let Some(new_origin) = self.origin_for_alignment_or_justification(
             margin_box_rect.get_axis(self.axis),
-            wrapper_writing_mode,
+            container_writing_mode,
             abspos_writing_mode,
         ) else {
             return;
